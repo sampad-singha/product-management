@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
@@ -23,7 +26,7 @@ class CategoryController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return View
      */
     public function create()
     {
@@ -33,8 +36,8 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return RedirectResponse
      */
     public function store(Request $request)
     {
@@ -44,21 +47,27 @@ class CategoryController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // Create a new category
-        $category = new \App\Models\Category();
-        $category->name = $request->input('name');
-        $category->description = $request->input('description', '');
-        $category->save();
+        try {
+            // Create a new category
+            $category = new \App\Models\Category();
+            $category->name = $request->input('name');
+            $category->description = $request->input('description', '');
+            $category->save();
 
-        // Redirect to the category index page with a success message
-        return redirect()->route('categories.index')->with('success', 'Category created successfully.');
+            // Redirect to the category index page with a success message
+            return redirect()->route('categories.index')->with('success', 'Category created successfully.');
+        } catch (\Exception $e) {
+            // Handle any errors that may occur during the save operation
+            Log::error($e->getMessage());
+            return back()->withErrors(['error' => 'An error occurred while creating the category: ' . $e->getMessage()])->withInput();
+        }
     }
 
     /**
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -81,9 +90,9 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param Request $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return RedirectResponse
      */
     public function update(Request $request, $id)
     {
@@ -93,27 +102,38 @@ class CategoryController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // Find the category and update its details
-        $category = \App\Models\Category::findOrFail($id);
-        $category->name = $request->input('name');
-        $category->description = $request->input('description', '');
-        $category->save();
+        try {
+            // Find the category and update its details
+            $category = \App\Models\Category::findOrFail($id);
+            $category->name = $request->input('name');
+            $category->description = $request->input('description', '');
+            $category->save();
 
-        // Redirect to the category index page with a success message
-        return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
+            // Redirect to the category index page with a success message
+            return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
+        } catch (\Exception $e) {
+            // Handle any errors that may occur during the update operation
+            Log::error($e->getMessage());
+            return back()->withErrors(['error' => 'An error occurred while updating the category: ' . $e->getMessage()])->withInput();
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return RedirectResponse
      */
     public function destroy($id)
     {
-        $category = \App\Models\Category::findOrFail($id);
-        $category->delete();
+        try {
+            $category = \App\Models\Category::findOrFail($id);
+            $category->delete();
 
-        return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
+            return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return back()->withErrors(['error' => 'An error occurred while deleting the category: ' . $e->getMessage()]);
+        }
     }
 }

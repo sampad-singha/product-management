@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return View
      */
     public function index()
     {
@@ -21,19 +26,19 @@ class ProductController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return View
      */
     public function create()
     {
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
         return view('product.create', compact('categories'));
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @param Request $request
+     * @return RedirectResponse
      */
     public function store(Request $request)
     {
@@ -46,19 +51,24 @@ class ProductController extends Controller
             'categories.*' => 'exists:categories,id',    // each category must exist
         ]);
 
-        // Create the product
-        $product = new \App\Models\Product();
-        $product->name = $validated['name'];
-        $product->description = $validated['description'] ?? '';
-        $product->price = $validated['price'];
-        $product->save();
+        try {
+            // Create the product
+            $product = new Product();
+            $product->name = $validated['name'];
+            $product->description = $validated['description'] ?? '';
+            $product->price = $validated['price'];
+            $product->save();
 
-        // Attach categories (many-to-many)
-        $product->categories()->sync($validated['categories']);
+            // Attach categories (many-to-many)
+            $product->categories()->sync($validated['categories']);
 
-        // Redirect back with success
-        return redirect()->route('products.index')
-            ->with('success', 'Product created successfully.');
+            // Redirect back with success
+            return redirect()->route('products.index')
+                ->with('success', 'Product created successfully.');
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return back()->withErrors(['error' => 'An error occurred while creating the product: ' . $e->getMessage()])->withInput();
+        }
     }
 
 
@@ -66,35 +76,35 @@ class ProductController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Factory|\Illuminate\View\View|View
      */
-//    public function show($id)
-//    {
-//        $product = Product::findOrFail($id);
-//        return view('product.show', compact('product'));
-//    }
+    public function show($id)
+    {
+        $product = Product::findOrFail($id);
+        return view('product.show', compact('product'));
+    }
 
     /**
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Factory|\Illuminate\View\View|View
      */
-    public function edit($id)
+    public function edit(int $id)
     {
         $product = Product::findOrFail($id);
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
         return view('product.edit', compact('product', 'categories'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @param Product $product
+     * @return RedirectResponse
      */
-    public function update(Request $request, \App\Models\Product $product)
+    public function update(Request $request, Product $product)
     {
         // Validate
         $validated = $request->validate([
@@ -105,18 +115,23 @@ class ProductController extends Controller
             'categories.*' => 'exists:categories,id',
         ]);
 
-        // Update product
-        $product->update([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? '',
-            'price' => $validated['price'],
-        ]);
+        try {
+            // Update product
+            $product->update([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? '',
+                'price' => $validated['price'],
+            ]);
 
-        // Sync categories
-        $product->categories()->sync($validated['categories']);
+            // Sync categories
+            $product->categories()->sync($validated['categories']);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product updated successfully.');
+            return redirect()->route('products.index')
+                ->with('success', 'Product updated successfully.');
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return back()->withErrors(['error' => 'An error occurred while updating the product: ' . $e->getMessage()])->withInput();
+        }
     }
 
 
@@ -124,12 +139,17 @@ class ProductController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return RedirectResponse
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $product = Product::findOrFail($id);
-        $product->delete();
-        return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+        try {
+            $product = Product::findOrFail($id);
+            $product->delete();
+            return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return back()->withErrors(['error' => 'An error occurred while deleting the product: ' . $e->getMessage()]);
+        }
     }
 }
