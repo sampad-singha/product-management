@@ -7,8 +7,8 @@ use App\Http\Controllers\ProductController;
 
 Route::get('/', function () {
     return view('dashboard');
-});
+})->name('dashboard');
 
-Route::resource('categories', CategoryController::class)->except(['show']);
-Route::resource('products', ProductController::class)->except(['show']);
+Route::resource('categories', CategoryController::class);
+Route::resource('products', ProductController::class);
 
